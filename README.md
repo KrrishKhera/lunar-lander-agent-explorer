@@ -19,17 +19,48 @@ The DQN checkpoint came from DeepLearning.AI coursework. I kept the original mod
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    user[User] --> app[Streamlit App]
-    benchmark[Saved Benchmark CSV and JSON] --> app
-    replay[Saved Seed-1000 Replay] --> app
-    app --> runner[Episode Simulation Runner]
-    runner --> dqn[DQN Policy]
-    weights[Saved NumPy Weights] --> dqn
-    runner --> random[Seeded Random Policy]
-    runner --> env[Gymnasium LunarLander-v3]
-    runner --> output[Episode Results, Telemetry, and New Replay]
+```text
+  +------+       +------------------+
+  | User | ----> |  Streamlit App   |
+  +------+       +--------+---------+
+                           |
+                           v
+                   +-------+--------+
+                   | Episode Runner |
+                   +-------+--------+
+                           |
+             +-------------+-------------+
+             |                           |
+             v                           v
+      +------+--------+           +------+--------------+
+      | DQN Policy    |           | Random Policy      |
+      +------+--------+           +------+--------------+
+             ^                           |
+             |                           |
+      +------+--------+                  |
+      | Saved NumPy   |                  |
+      | Weights       |                  |
+      +---------------+                  |
+             +-------------+-------------+
+                           |
+                           v
+                  +--------+---------+
+                  | Gymnasium        |
+                  | Environment      |
+                  +--------+---------+
+                           |
+                           v
+                  +--------+---------+
+                  | Episode Results  |
+                  | / Telemetry      |
+                  | / Generated      |
+                  | Replay           |
+                  +------------------+
+
+  App also loads these saved inputs:
+  +----------------------+   +------------------+
+  | Saved Benchmark Data |   | Saved Replay    |
+  +----------------------+   +------------------+
 ```
 
 The Streamlit app reads the saved benchmark files and illustrative replay for their respective tabs. When a user runs an episode, the app calls the simulation runner with a policy and seed. The runner uses the DQN weights or the seeded random policy to act in Gymnasium, then returns episode data and an optional generated video for display.
