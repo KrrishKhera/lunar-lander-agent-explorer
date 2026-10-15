@@ -1,119 +1,155 @@
 # Lunar Lander Agent Explorer
 
-I built this Streamlit app to inspect a saved Lunar Lander DQN one episode at a time and compare its behavior with a random policy. A training score alone does not show what the agent does in individual episodes, so the app pairs replay and telemetry with a separate seeded evaluation.
+## Project overview
 
-The original DQN was trained for DeepLearning.AI coursework. I kept that checkpoint and added NumPy inference, the Gymnasium evaluation pipeline, the Streamlit explorer, and Docker packaging (with AI assistance). The app does not train or modify the model.
+I built this project to make a saved Deep Q-Network (DQN) LunarLander agent easier to inspect. The Streamlit app lets me run a seeded episode, watch the replay, and look at the reward and action telemetry. A separate Benchmark tab compares the fixed agent with a seeded random policy using saved evaluation results.
+
+The DQN checkpoint came from DeepLearning.AI coursework. I kept the original model and added a NumPy inference path, a Gymnasium evaluation pipeline, the explorer UI, and Docker packaging, with AI assistance during parts of the application work. The app does not train or change the model.
 
 ## Features
 
-- **Episode replay:** Start with a saved illustrative DQN replay or generate a new episode using DQN or uniform-random actions.
-- **Episode controls:** Choose a policy and integer seed from 0 to 1,000,000. Episodes end on simulator termination/truncation or at 1,000 steps.
-- **Telemetry:** View reward, simulator outcome, step count, action counts, cumulative reward over time, and per-step observations/actions. Download a new episode's trace as CSV.
-- **Benchmark:** Compare the saved paired 50-seed DQN/random results, summary statistics, rewards by seed, a selected seed, and the raw CSV.
-- **Methodology:** Read about the model, evaluation setup, Gym version distinction, and limitations.
-
-## Application screenshots
-
-**No genuine screenshots are in the repository yet.** Add reviewed browser captures of the Episode replay, Benchmark, and Methodology tabs here when available. No placeholder images are used.
+- **Saved DQN policy:** Runs greedy inference from the checked-in NumPy weight file.
+- **Random baseline:** Selects uniformly random actions from a seed-based NumPy generator.
+- **Episode controls:** Choose DQN or Random, select an integer seed, and record an episode of up to 1,000 steps.
+- **Replay and telemetry:** View a saved seed-1000 DQN replay or generate a new video. New episodes show cumulative reward, simulator outcome, step count, action counts, and per-step telemetry; the trace can be downloaded as CSV.
+- **Saved benchmark:** Compare DQN and Random results across the same 50 Gymnasium v3 seeds, inspect individual seeds, and download the raw results.
+- **Model checks:** A development script compares TensorFlow predictions from the original H5 checkpoint with the NumPy implementation.
+- **Tests and packaging:** Includes a saved-benchmark integrity test and a Docker image that has been built and smoke-tested locally.
+- **Render guide:** The README documents a possible Docker-based Render deployment. The project has not been deployed there.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
     user[User] --> app[Streamlit App]
-    benchmark[Saved Benchmark Results] --> app
+    benchmark[Saved Benchmark CSV and JSON] --> app
     replay[Saved Seed-1000 Replay] --> app
     app --> runner[Episode Simulation Runner]
-
     runner --> dqn[DQN Policy]
     weights[Saved NumPy Weights] --> dqn
     runner --> random[Seeded Random Policy]
-    runner --> environment[Gymnasium LunarLander Environment]
-
-    runner --> output[Episode Results and Telemetry<br/>Generated Replay Video]
-    output --> app
+    runner --> env[Gymnasium LunarLander-v3]
+    runner --> output[Episode Results, Telemetry, and New Replay]
 ```
 
-At app startup, `load_benchmark()` checks the saved rows and seed list and verifies that the NumPy weights have the hash recorded in the evaluation summary. A newly generated episode is kept in the Streamlit session; it does not overwrite the saved benchmark.
+The Streamlit app reads the saved benchmark files and illustrative replay for their respective tabs. When a user runs an episode, the app calls the simulation runner with a policy and seed. The runner uses the DQN weights or the seeded random policy to act in Gymnasium, then returns episode data and an optional generated video for display.
 
 ## How it works
 
-The inference policy loads three weight/bias pairs from `models/dqn_weights.npz`. For each observation, it applies two 64-unit ReLU layers and a four-value linear output layer, then selects the action with the largest Q-value (`argmax`). The network is 8 → 64 → 64 → 4. The app uses NumPy weights at runtime; TensorFlow is only needed for the separate checkpoint-verification step.
+1. On startup, `app.py` calls `load_benchmark()`. It reads `results/episodes.csv` and `results/summary.json`, checks the expected seed rows, and verifies the saved NumPy weight hash against the summary. This loads existing results; it does not start a new benchmark.
+2. In **Episode replay**, the user selects DQN or Random, enters a seed, and starts a run. Before a new run, the app displays the saved seed-1000 DQN replay if that asset is available.
+3. `run_episode()` creates a fresh Gymnasium `LunarLander-v3` environment and resets it with the selected seed. For DQN, it loads the saved NumPy weights and selects the action with the highest Q-value. For Random, it chooses uniformly from the four actions using a NumPy generator seeded from the selected seed.
+4. The runner accumulates the environment's rewards and records the episode outcome, step count, action counts, and—when requested—per-step reward, cumulative reward, action, position, and angle. Episode recording samples rendered frames into a temporary MP4.
+5. The app displays the generated video and telemetry in the current Streamlit session. It does not overwrite the saved benchmark CSV, summary, or seed-1000 replay.
 
-Gymnasium supplies an eight-value observation: normalized horizontal and vertical position, horizontal and vertical velocity, lander angle, angular velocity, and two leg-contact flags. The discrete actions are coast, left engine, main engine, and right engine. The app sums the environment's per-step rewards into an episode score. Those rewards reflect environment state/progress, engine use, and terminal conditions. A high cumulative reward alone does not establish a safe landing.
+The random policy is a useful reference because it shows how the environment scores untrained, unstructured action choices under the same selected seeds. It is a baseline for comparison, not a second trained agent.
 
-`run_episode()` resets `LunarLander-v3` with the selected seed. The DQN chooses actions from observations; the random policy uses a seeded NumPy generator. When telemetry is requested, the runner records each step's reward, cumulative reward, action, position, and angle. It also counts actions and derives an outcome from simulator state, such as crash, out of bounds, landed/at rest, or time limit.
+## Model and policy details
 
-For a new replay, the runner requests RGB frames and writes a temporary MP4, sampling every other step and including the final frame. It returns the video bytes, summary, and trace to Streamlit. Before a new run, the app shows the saved DQN seed-1000 replay. That file is one illustrative episode from the prior evaluation environment, not a video summary of the benchmark.
+The saved DQN weights are three weight-and-bias pairs exported from the original Dense network. `lander/policy.py` implements inference in NumPy: it applies two 64-unit ReLU layers and a four-value linear output layer, then uses `argmax` to choose an action. The network shape is **8 → 64 → 64 → 4**.
 
-## Evaluation and results
+The policy accepts an eight-value observation, and the simulator exposes four discrete actions: coast, left engine, main engine, and right engine. The environment's reward is accumulated over the episode; it is a score, not by itself a measure of whether the lander came to rest safely.
 
-The saved evaluation ran the fixed DQN and uniform-random baseline on the same **50 seeds (1000–1049)** in Gymnasium `LunarLander-v3`. Each episode used a fresh environment, default gravity, no wind, and a 1,000-step cap. The figures below come from `results/summary.json`; the raw 100 episode rows are in `results/episodes.csv`.
+The Random option uses a seeded NumPy generator. Reusing the same seed and policy makes runs repeatable in the tested setup. Seeds make it easier to compare policies under matching starting conditions and to reproduce an episode when investigating its telemetry.
 
-| Policy | Episodes | Mean reward | Sample SD | Reward ≥ 200 |
-| --- | ---: | ---: | ---: | ---: |
-| Saved DQN | 50 | 215.36 | 65.99 | 36 / 50 |
-| Uniform random | 50 | -213.18 | 102.15 | 0 / 50 |
+The DQN weights are fixed at runtime. The project does not retrain them. `models/model_info.json` records the original checkpoint hash, architecture, and training provenance. The original H5 checkpoint is not part of the runtime image or GitHub upload; `scripts/verify_model.py` needs that original file at `models/original_dqn.h5` to repeat the TensorFlow-versus-NumPy check.
 
-The DQN-minus-random mean reward difference is **428.54** in this sample. Reward ≥ 200 is a score threshold, not a landing-success rate; the app reports simulator outcomes separately.
+## Evaluation and benchmark results
 
-The historical course result is separate: a rolling mean of **200.05 over the final 100 training episodes at episode 455** in **OpenAI Gym `LunarLander-v2`**. The table above is a later evaluation of the saved checkpoint in **Gymnasium `LunarLander-v3`**. They are different environments and measurement contexts, not a single experiment.
+The saved Gymnasium `LunarLander-v3` evaluation compares the fixed DQN with a uniform-random baseline on the same **50 seeds, 1000–1049**. Each policy has 50 recorded episodes, each with a 1,000-step cap. These figures come from `results/summary.json`; this documentation update did not rerun the evaluation.
 
-The saved MP4 is a single DQN run for seed 1000. It is separate from the 50-seed summary and is not the average episode.
+| Policy | Episodes | Mean reward |
+| --- | ---: | ---: |
+| Saved DQN | 50 | 215.36 |
+| Seeded random baseline | 50 | -213.18 |
+
+In this saved sample, the DQN's mean cumulative reward is higher than the random policy's. Reward **≥ 200 is only a score threshold**, not proof of a successful landing. The app reports simulator outcome separately for each episode.
+
+This evaluation is distinct from the original training record. The supplied course checkpoint was trained in OpenAI Gym `LunarLander-v2`; its metadata records a rolling mean reward of **200.05 over the final 100 training episodes at episode 455**. The saved 50-seed evaluation instead transfers that checkpoint to Gymnasium `LunarLander-v3`; it is not a reproduction of the training run.
+
+The `assets/evaluation_seed_1000.mp4` file is one illustrative replay from the earlier evaluation environment. It is separate from the 50-seed benchmark and is not an average episode or a benchmark summary.
+
+## Demo and screenshots
+
+There are no genuine application screenshots in the repository yet. I will add browser captures after reviewing the current UI at desktop and narrow-screen sizes. I have not added placeholder image paths or a hosted demo link.
+
+The saved seed-1000 replay is available at [`assets/evaluation_seed_1000.mp4`](assets/evaluation_seed_1000.mp4). It is a single DQN episode; the app can also generate a new replay for the selected policy and seed.
 
 ## Tech stack
 
-- Python 3.12
-- Streamlit 1.50 and pandas for the UI, tables, and charts
-- Gymnasium 1.2.2 with Box2D (`box2d-py` 2.3.5)
-- NumPy 2.2.6 for policy inference and random actions
-- ImageIO 2.37 and imageio-ffmpeg 0.6.0 for MP4 output
-- TensorFlow 2.20 and h5py 3.14 for development-only model verification
-- Docker for packaging; the image was built and tested locally. Render is the planned host; no Render deployment is verified.
+- **Language and UI:** Python 3.12, Streamlit 1.50, pandas.
+- **Simulation and inference:** Gymnasium 1.2.2 with Box2D (`box2d-py` 2.3.5), NumPy 2.2.6.
+- **Replay output:** ImageIO 2.37 and imageio-ffmpeg 0.6.0.
+- **Model verification:** TensorFlow 2.20 and h5py 3.14, installed from `requirements-dev.txt`; these are not needed for app inference.
+- **Testing and packaging:** Python `unittest`, Streamlit `AppTest`, Docker.
+- **Deployment documentation:** Render Docker web-service instructions. No Render deployment configuration or live service is present.
 
-Runtime pins are in `requirements.txt`; verification dependencies are in `requirements-dev.txt`.
+The exact runtime pins are in `requirements.txt`; development verification pins are in `requirements-dev.txt`.
 
 ## Project structure
 
-| Path | Purpose |
-| --- | --- |
-| `app.py` | Streamlit interface, controls, charts, and downloads. |
-| `lander/policy.py` | NumPy implementation of the saved DQN inference path. |
-| `lander/simulation.py` | Seeded episodes, telemetry, simulator outcome, and optional rendering. |
-| `lander/benchmark.py` | Loads and validates saved benchmark data and the model hash. |
-| `models/dqn_weights.npz` | Dense-layer weights used by the app; `model_info.json` records provenance. |
-| `results/` | Saved v3 episode rows, evaluation summary, and verification smoke results. |
-| `assets/evaluation_seed_1000.mp4` | Illustrative replay shown before a new run. |
-| `scripts/`, `tests/` | Model export/verification, benchmark runner, and saved-result integrity test. |
-| `requirements*.txt`, `Dockerfile` | Dependency pins and container build/start configuration. |
+```text
+.
+├── app.py
+├── lander/
+│   ├── benchmark.py
+│   ├── policy.py
+│   └── simulation.py
+├── models/
+│   ├── dqn_weights.npz
+│   └── model_info.json
+├── results/
+│   ├── episodes.csv
+│   ├── smoke_check.json
+│   └── summary.json
+├── assets/
+│   └── evaluation_seed_1000.mp4
+├── scripts/
+│   ├── evaluate.py
+│   ├── export_model.py
+│   └── verify_model.py
+├── tests/
+│   └── test_benchmark.py
+├── requirements.txt
+├── requirements-dev.txt
+├── Dockerfile
+└── README.md
+```
 
-## Run locally
+`app.py` contains the Streamlit tabs and display logic. The `lander/` package separates model inference, episode simulation, and saved benchmark loading. `scripts/` contains export, evaluation, and verification utilities. `results/` stores the saved Gymnasium v3 evaluation and model smoke-check output.
 
-Use Python 3.12. On macOS, Box2D's native dependency may require the Xcode command-line tools. These commands create a project-local virtual environment and install the pinned app dependencies:
+## Local setup and execution
+
+Use Python 3.12. If the project-local `.venv` does not exist yet, create it with the first command; then activate it and install the pinned runtime dependencies there:
 
 ```sh
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install setuptools wheel swig
 python -m pip install --no-build-isolation -r requirements.txt
-python -m unittest discover -s tests
 streamlit run app.py
 ```
 
-Open the local URL printed by Streamlit. The app reads the recorded benchmark; it does not retrain the agent or run the full evaluation.
+On macOS, a Box2D source build may also need the Xcode Command Line Tools. Once Streamlit starts, open the local URL it prints (normally `http://localhost:8501`). Press **Ctrl+C** in the terminal to stop the app.
 
-To compare the saved NumPy policy with the original H5 model, install the development requirements and run the verifier:
+To run the saved-results integrity test:
+
+```sh
+python -m unittest discover -s tests
+```
+
+To repeat the model parity check, install the development requirements and provide the original H5 checkpoint at `models/original_dqn.h5` first. That file is intentionally excluded from the repository and is not needed to run the app.
 
 ```sh
 python -m pip install --no-build-isolation -r requirements-dev.txt
 python scripts/verify_model.py
 ```
 
-The verifier writes `results/smoke_check.json`. `scripts/evaluate.py` writes new benchmark files, so run it only when you intend to replace the saved evaluation.
+The verifier writes `results/smoke_check.json`. `scripts/evaluate.py` writes new benchmark files; do not run it unless you intend to create a new evaluation output.
 
-## Run with Docker
+## Docker instructions
 
-These are the commands used for the local container check on an Apple-silicon Mac. The `linux/amd64` target matches the tested hosting image platform and builds under emulation on this Mac.
+The following commands build and run the tested `linux/amd64` image locally. On Apple silicon, Docker uses emulation for this target. The host port is restricted to this machine, while Streamlit listens on `0.0.0.0` inside the container and uses the supplied `PORT` value.
 
 ```sh
 docker build --platform linux/amd64 -t lunar-lander-explorer:local .
@@ -123,40 +159,45 @@ curl --fail --silent --show-error --max-time 10 \
   http://127.0.0.1:8080/_stcore/health
 curl --silent --show-error --output /dev/null \
   --write-out 'root_http=%{http_code}\n' --max-time 10 http://127.0.0.1:8080
+docker stop lunar-lander-smoke
 ```
 
-The host port is bound to `127.0.0.1` and forwarded to port 8080 in the container. The Dockerfile binds Streamlit to `0.0.0.0` and uses the `PORT` variable (8080 by default). In the completed test, the health endpoint returned `ok` and the root returned HTTP 200. The local image was 1,425,377,073 bytes (about 1.43 GB). After checking the service, stop it with `docker stop lunar-lander-smoke`; `--rm` removes the stopped smoke-test container while the image remains locally.
+The health check should return `ok`, and the root request should report HTTP 200. The health path is Streamlit's `/_stcore/health` endpoint. The local image tested for this project was about 1.43 GB; the container test does not prove that the image or app fits Render Free's memory limit.
 
-## Deploy on Render
+## Render deployment instructions
 
-The app has **not** been deployed to Render. After reviewing and pushing the intended files to GitHub:
+The project is **not deployed on Render**. To try a deployment after reviewing the repository:
 
-1. In the Render Dashboard, choose **New → Web Service**, connect GitHub, and select this repository and branch.
-2. Set the service runtime to **Docker** and use the repository-root `Dockerfile`.
-3. Choose a region and compute plan. Keep the Dockerfile's start command unless there is a specific reason to override it.
-4. In service settings, set the HTTP health-check path to `/_stcore/health`.
-5. After deployment succeeds, visit the service URL. Verify health, the benchmark, the saved replay, and a newly generated episode before describing the app as deployed.
+1. In the Render Dashboard, create a **Web Service** and connect the GitHub repository and branch.
+2. Select **Docker** and use the root `Dockerfile` (`/Dockerfile`). Leave the start command unchanged so the image's `CMD` runs Streamlit.
+3. Select the **Free** compute plan and a region.
+4. Set the HTTP health-check path to `/_stcore/health`.
+5. After the first deploy, open the hosted app and check the health endpoint, saved replay, benchmark, and a newly generated episode.
 
-The Dockerfile listens on `0.0.0.0` and follows Render's `PORT` (default `10000`). The health endpoint passed locally; its hosted behavior still needs verification. See Render's [Docker deployment guide](https://render.com/docs/docker), [web service setup and port binding](https://render.com/docs/web-services), and [health checks](https://render.com/docs/health-checks).
+The Dockerfile binds Streamlit to `0.0.0.0` and follows Render's injected `PORT` (defaulting to 8080 in this Dockerfile). Render web services expect the process to bind on `0.0.0.0`; its default expected port is 10000, but it can provide a configured port to the container. The local health check has passed; hosted startup, episode behavior, and memory use are still unverified. See Render's [Docker deployment guide](https://render.com/docs/docker), [web-service setup](https://render.com/docs/web-services), and [health-check documentation](https://render.com/docs/health-checks).
 
-Render Free web services currently provide 0.1 CPU and 512 MB RAM, spin down after 15 minutes without inbound traffic, and may take about a minute to start again. The app's memory use on this plan has not been measured; verify startup and an episode run, and use a larger plan if it exceeds available memory. Free services have ephemeral filesystems, so local changes disappear on restart or redeploy. This app's model, benchmark, and replay are packaged in the image. Render currently includes 750 free instance-hours per workspace each month, plus bounded bandwidth and build-pipeline usage; check account usage and billing settings because overages can suspend service/builds or incur charges depending on account setup. Render describes Free instances as suitable for hobby projects and previews, not production. See [Free plan limitations](https://render.com/docs/free) and [compute plans](https://render.com/docs/compute-plans).
+Render currently lists the Free web-service plan at **0.1 CPU and 512 MB RAM**. Free services spin down after 15 minutes without inbound traffic and take about a minute to start again. Their filesystem is ephemeral, and Free services cannot attach persistent disks. The app's memory use on this plan has not been measured, so startup or episode generation may exceed the available memory. Free plans include **750 instance-hours per workspace per calendar month**; spun-down services do not consume those hours. Outbound bandwidth and build-pipeline usage also have monthly limits. Exceeding these limits can suspend services or builds, or lead to billable overages depending on payment and spend-limit settings. Check current account usage and billing before deploying. See Render's [Free plan limits](https://render.com/docs/free) and [compute plans](https://render.com/docs/compute-plans).
 
 ## Testing and verification
 
-These checks have passed:
+These results are from earlier project verification milestones; they were not all rerun while editing this README.
 
-- `python scripts/verify_model.py` in the project environment: TensorFlow and NumPy predictions were within `rtol=atol=1e-4`, with 100% action agreement. The seeded episode repeated consistently on the Mac.
-- `python -m unittest discover -s tests`: the saved benchmark summary matched the raw rows (1 test passed). This checks the saved data; it does not rerun the benchmark.
-- Streamlit `AppTest`: startup, DQN and random episode runs, changed/repeated seeds, telemetry/action totals, and MP4 decoding passed without app exceptions.
-- Local Docker test: the `linux/amd64` image built; health returned `ok`, root returned HTTP 200, and an in-container smoke check loaded the model, benchmark data, replay, and a seeded episode.
+- **Model parity:** `python scripts/verify_model.py` compared the original H5 model with the NumPy implementation. The recorded `results/smoke_check.json` reports 100% action agreement, all tested Q-values within the configured `1e-4` tolerance, and a maximum single-observation absolute difference of about `1.14e-5`. The script also repeated a seeded episode consistently. The original H5 checkpoint is required to rerun this check.
+- **Saved benchmark integrity:** `python -m unittest discover -s tests` passed the one committed test, checking the saved summary statistics against raw episode rows. It does not run the 50-seed evaluation.
+- **Streamlit AppTest:** A prior `streamlit.testing.v1.AppTest` harness checked startup, tabs and controls, DQN and Random runs, repeated seeds, telemetry/action counts, and MP4 decoding without app exceptions. This was an inline harness, not a committed test file. Browser-level visual review and playback were not verified.
+- **Local Docker:** `docker build --platform linux/amd64 -t lunar-lander-explorer:local .` succeeded. The container's Streamlit health endpoint returned `ok`, the root returned HTTP 200, and an in-container smoke check loaded the model, validated the benchmark, decoded the saved replay, and ran a 344-step seed-1000 DQN episode. The temporary container was removed; the local image remains.
 
-Streamlit `AppTest` checks app execution and callbacks, not screenshot-level visual layout. No Render deployment has been tested, so local Docker success does not prove Render memory fit or hosted behavior.
+The saved Mac model smoke check recorded seed 1000 at reward `265.038206`, 344 steps, and simulator outcome `Landed / at rest`. The Docker run recorded a slightly different cumulative reward (`265.038297`) for the same 344-step outcome. These are single smoke-check episodes, not the 50-seed benchmark. Small floating-point differences across runtime platforms are possible.
 
-## Limitations and future work
+## Limitations and future improvements
 
-- The saved DQN was trained in Gym v2 and evaluated in Gymnasium v3. This is a transfer evaluation, not a reproduction of training. Fifty fixed seeds do not establish performance on new conditions.
-- Reward is a cumulative score; reward ≥ 200 is not proof of a successful landing. Use the simulator outcome for that episode's termination context.
-- Measure memory during a Render Free episode before relying on the 512 MB plan. The local image is about 1.43 GB; a multi-stage build may reduce build-tool weight, but any size or memory optimization must retain Box2D's runtime libraries and pass the existing container smoke checks.
-- Capture genuine screenshots and complete a browser review. Then deploy to Render and verify the hosted episode flow.
-- Extend evaluation with additional seeds and varied conditions, keeping new measurements reproducible and separate from the existing data.
-- An optional natural-language explanation could summarize recorded episode actions, rewards, and outcome. It is not implemented; any future LLM feature should be clearly distinguished from deterministic telemetry and remain optional.
+- The checkpoint was trained in Gym `LunarLander-v2` and evaluated in Gymnasium `LunarLander-v3`. The environment versions differ, and 50 fixed seeds do not establish general reliability.
+- The saved evaluation uses one seed range and default gravity/no wind. More seeds and varied environment conditions would give a broader evaluation.
+- There is one checked-in illustrative replay. The app generates new replays on demand, but the saved clip is not a summary of the benchmark.
+- Render Free's memory limit may be too small for the image or video-generating episode flow. Measure hosted memory before relying on the free service; the 1.43 GB local image size is a separate disk-size measure, not RAM use.
+- The project has no genuine screenshots or verified live deployment yet. Those should be added only after browser review and a successful hosted smoke test.
+- Natural-language episode explanations could be explored later, but no LLM feature is implemented. Any explanation should remain optional and distinguish generated text from measured telemetry.
+
+## What I learned
+
+This project helped me practice keeping training separate from inference: the app loads fixed weights and does not need to retrain the agent. I also worked with seeded runs to make episodes repeatable, compared a policy with a simple baseline, and separated the model, simulator, benchmark loader, and UI into distinct modules. Building and testing the Docker image showed me how a local container check can verify startup and packaged assets, while still leaving deployment-specific questions—especially memory and cold starts—to be tested on the host.
