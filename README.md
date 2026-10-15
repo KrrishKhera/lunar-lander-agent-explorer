@@ -12,6 +12,7 @@ The DQN checkpoint came from DeepLearning.AI coursework. I kept the original mod
 - **Random baseline:** Selects uniformly random actions from a seed-based NumPy generator.
 - **Episode controls:** Choose DQN or Random, select an integer seed, and record an episode of up to 1,000 steps.
 - **Replay and telemetry:** View a saved seed-1000 DQN replay or generate a new video. New episodes show cumulative reward, simulator outcome, step count, action counts, and per-step telemetry; the trace can be downloaded as CSV.
+- **Optional episode explanation:** After an episode finishes, request a plain-English explanation from a local Ollama model. The app sends compact episode facts and sampled trajectory points; Ollama does not control the lander.
 - **Saved benchmark:** Compare DQN and Random results across the same 50 Gymnasium v3 seeds, inspect individual seeds, and download the raw results.
 - **Model checks:** A development script compares TensorFlow predictions from the original H5 checkpoint with the NumPy implementation.
 - **Tests and packaging:** Includes a saved-benchmark integrity test and a Docker image that has been built and smoke-tested locally.
@@ -65,6 +66,8 @@ The DQN checkpoint came from DeepLearning.AI coursework. I kept the original mod
 
 The Streamlit app reads the saved benchmark files and illustrative replay for their respective tabs. When a user runs an episode, the app calls the simulation runner with a policy and seed. The runner uses the DQN weights or the seeded random policy to act in Gymnasium, then returns episode data and an optional generated video for display.
 
+The optional explainer runs only after the user presses **Explain This Episode**. It sends episode metrics, a bounded summary of consecutive actions, and up to eight sampled trajectory points to the local Ollama chat API. The app displays the returned text; the model is not part of the simulation or policy path.
+
 ## How it works
 
 1. On startup, `app.py` calls `load_benchmark()`. It reads `results/episodes.csv` and `results/summary.json`, checks the expected seed rows, and verifies the saved NumPy weight hash against the summary. This loads existing results; it does not start a new benchmark.
@@ -111,6 +114,7 @@ The saved seed-1000 replay is available at [`assets/evaluation_seed_1000.mp4`](a
 - **Language and UI:** Python 3.12, Streamlit 1.50, pandas.
 - **Simulation and inference:** Gymnasium 1.2.2 with Box2D (`box2d-py` 2.3.5), NumPy 2.2.6.
 - **Replay output:** ImageIO 2.37 and imageio-ffmpeg 0.6.0.
+- **Optional local explanations:** Ollama's local HTTP API and the `qwen2.5:3b-instruct-q4_0` model. The integration uses Python's standard library and adds no application dependency.
 - **Model verification:** TensorFlow 2.20 and h5py 3.14, installed from `requirements-dev.txt`; these are not needed for app inference.
 - **Testing and packaging:** Python `unittest`, Streamlit `AppTest`, Docker.
 - **Deployment documentation:** Render Docker web-service instructions. No Render deployment configuration or live service is present.
@@ -124,6 +128,7 @@ The exact runtime pins are in `requirements.txt`; development verification pins 
 ├── app.py
 ├── lander/
 │   ├── benchmark.py
+│   ├── explainer.py
 │   ├── policy.py
 │   └── simulation.py
 ├── models/
@@ -140,7 +145,9 @@ The exact runtime pins are in `requirements.txt`; development verification pins 
 │   ├── export_model.py
 │   └── verify_model.py
 ├── tests/
-│   └── test_benchmark.py
+│   ├── test_benchmark.py
+│   ├── test_explainer.py
+│   └── test_explainer_app.py
 ├── requirements.txt
 ├── requirements-dev.txt
 ├── Dockerfile
@@ -163,6 +170,17 @@ streamlit run app.py
 
 On macOS, a Box2D source build may also need the Xcode Command Line Tools. Once Streamlit starts, open the local URL it prints (normally `http://localhost:8501`). Press **Ctrl+C** in the terminal to stop the app.
 
+### Optional local Ollama episode explanation
+
+The core app does not require Ollama. To enable the explainer on macOS, install the Ollama app from the [official macOS download page](https://ollama.com/download/mac), open it so its local service is running, then download the selected model:
+
+```sh
+ollama pull qwen2.5:3b-instruct-q4_0
+ollama list
+```
+
+The quantized model is about 1.8 GB. Keep the Ollama service running, launch the app with `streamlit run app.py`, generate an episode, then press **Explain This Episode** below its telemetry. Generation is opt-in and has a 90-second timeout. If Ollama is unreachable, open the Ollama app (or start its service with `ollama serve`); if the model is missing, run the `ollama pull` command above. Episodes, replays, telemetry, and benchmark results remain available without Ollama.
+
 To run the saved-results integrity test:
 
 ```sh
@@ -180,7 +198,7 @@ The verifier writes `results/smoke_check.json`. `scripts/evaluate.py` writes new
 
 ## Docker instructions
 
-The following commands build and run the tested `linux/amd64` image locally. On Apple silicon, Docker uses emulation for this target. The host port is restricted to this machine, while Streamlit listens on `0.0.0.0` inside the container and uses the supplied `PORT` value.
+These commands previously built and ran the `linux/amd64` image locally, before the optional explainer was added. Rebuild to include the current source. On Apple silicon, Docker uses emulation for this target. The host port is restricted to this machine, while Streamlit listens on `0.0.0.0` inside the container and uses the supplied `PORT` value.
 
 ```sh
 docker build --platform linux/amd64 -t lunar-lander-explorer:local .
@@ -214,9 +232,9 @@ Render currently lists the Free web-service plan at **0.1 CPU and 512 MB RAM**. 
 These results are from earlier project verification milestones; they were not all rerun while editing this README.
 
 - **Model parity:** `python scripts/verify_model.py` compared the original H5 model with the NumPy implementation. The recorded `results/smoke_check.json` reports 100% action agreement, all tested Q-values within the configured `1e-4` tolerance, and a maximum single-observation absolute difference of about `1.14e-5`. The script also repeated a seeded episode consistently. The original H5 checkpoint is required to rerun this check.
-- **Saved benchmark integrity:** `python -m unittest discover -s tests` passed the one committed test, checking the saved summary statistics against raw episode rows. It does not run the 50-seed evaluation.
-- **Streamlit AppTest:** A prior `streamlit.testing.v1.AppTest` harness checked startup, tabs and controls, DQN and Random runs, repeated seeds, telemetry/action counts, and MP4 decoding without app exceptions. This was an inline harness, not a committed test file. Browser-level visual review and playback were not verified.
-- **Local Docker:** `docker build --platform linux/amd64 -t lunar-lander-explorer:local .` succeeded. The container's Streamlit health endpoint returned `ok`, the root returned HTTP 200, and an in-container smoke check loaded the model, validated the benchmark, decoded the saved replay, and ran a 344-step seed-1000 DQN episode. The temporary container was removed; the local image remains.
+- **Tests after the explainer change:** `./.venv/bin/python -m unittest discover -s tests -v` passed 8 tests. They include saved-benchmark integrity, mocked Ollama success/unavailable/error/empty-response handling, and Streamlit AppTest checks for opt-in behavior, generated explanation display, an Ollama-unavailable message, the saved replay, and the Benchmark tab. The AppTest uses a mocked LLM response; it does not require or verify a live Ollama model.
+- **Earlier Streamlit checks:** A prior `streamlit.testing.v1.AppTest` harness checked DQN and Random runs, repeated seeds, telemetry/action counts, and MP4 decoding without app exceptions. Browser-level visual review and playback were not verified.
+- **Earlier local Docker check:** `docker build --platform linux/amd64 -t lunar-lander-explorer:local .` succeeded before the Ollama feature was added. At that time the health endpoint returned `ok`, the root returned HTTP 200, and an in-container smoke check loaded the model, validated the benchmark, decoded the saved replay, and ran a seed-1000 DQN episode. The image has not been rebuilt with the explainer change. Ollama is not installed in this environment, so live local generation is unverified.
 
 The saved Mac model smoke check recorded seed 1000 at reward `265.038206`, 344 steps, and simulator outcome `Landed / at rest`. The Docker run recorded a slightly different cumulative reward (`265.038297`) for the same 344-step outcome. These are single smoke-check episodes, not the 50-seed benchmark. Small floating-point differences across runtime platforms are possible.
 
@@ -227,7 +245,8 @@ The saved Mac model smoke check recorded seed 1000 at reward `265.038206`, 344 s
 - There is one checked-in illustrative replay. The app generates new replays on demand, but the saved clip is not a summary of the benchmark.
 - Render Free's memory limit may be too small for the image or video-generating episode flow. Measure hosted memory before relying on the free service; the 1.43 GB local image size is a separate disk-size measure, not RAM use.
 - The project has no genuine screenshots or verified live deployment yet. Those should be added only after browser review and a successful hosted smoke test.
-- Natural-language episode explanations could be explored later, but no LLM feature is implemented. Any explanation should remain optional and distinguish generated text from measured telemetry.
+- The optional explainer can produce plausible but incorrect interpretations. It receives sparse trajectory samples rather than every observation and cannot establish causation or inspect unrecorded simulator state. Ollama is not packaged in Docker; the integration currently targets `localhost:11434`, so a Docker or Render app cannot reach the user's Mac-local Ollama service.
+- Further work could evaluate explanation quality against human-reviewed examples and configure an explicit Ollama endpoint for hosted use. Neither has been implemented or tested.
 
 ## What I learned
 

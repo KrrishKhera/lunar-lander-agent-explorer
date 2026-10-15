@@ -3,6 +3,7 @@ import pandas as pd
 import streamlit as st
 
 from lander.benchmark import load_benchmark
+from lander.explainer import DEFAULT_MODEL, ExplainerError, explain_episode
 from lander.policy import ROOT
 from lander.simulation import ACTIONS, run_episode
 
@@ -55,6 +56,8 @@ with replay_tab:
         run = st.button('Run episode', type='primary', width='stretch')
         if run:
             st.session_state.pop('episode', None)
+            st.session_state.pop('episode_explanation', None)
+            st.session_state.pop('episode_explanation_error', None)
             try:
                 with st.spinner('Simulating and rendering the episode…'):
                     result, trace, video = run_episode(int(seed), agent, record=True, trace=True)
@@ -102,6 +105,23 @@ with replay_tab:
             st.markdown('#### Action counts')
             counts = pd.DataFrame({'Action': ACTIONS, 'Steps': result['action_counts']}).set_index('Action')
             st.bar_chart(counts, height=270)
+
+        st.markdown('#### Optional episode explanation')
+        st.caption(f'Uses local Ollama model `{DEFAULT_MODEL}` only when requested. The model cannot control the lander.')
+        if st.button('Explain This Episode', key='explain_episode'):
+            try:
+                with st.spinner('Asking local Ollama to explain the recorded episode…'):
+                    st.session_state['episode_explanation'] = explain_episode(result, trace)
+                st.session_state.pop('episode_explanation_error', None)
+            except ExplainerError as exc:
+                st.session_state.pop('episode_explanation', None)
+                st.session_state['episode_explanation_error'] = str(exc)
+
+        if st.session_state.get('episode_explanation_error'):
+            st.error(st.session_state['episode_explanation_error'])
+        if st.session_state.get('episode_explanation'):
+            st.info('AI-generated interpretation of recorded episode data. Possible explanations are hypotheses, not causal findings.')
+            st.markdown(st.session_state['episode_explanation'])
 
 with benchmark_tab:
     st.subheader('Recorded 50-seed Gymnasium v3 evaluation')
