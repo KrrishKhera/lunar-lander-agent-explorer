@@ -20,19 +20,18 @@ The original DQN was trained for DeepLearning.AI coursework. I kept that checkpo
 
 ```mermaid
 flowchart TD
-    user[User] --> app[Streamlit app]
-    benchmark[Saved benchmark results<br/>CSV and JSON] --> app
-    saved_replay[Saved seed-1000 replay video] --> app
-    app -->|Policy and seed| runner[Episode simulation runner]
-    weights[Saved NumPy DQN weights] --> policy[DQN policy]
-    runner -->|Observation when DQN is selected| policy
-    policy -->|Selected action| runner
-    runner -->|When Random is selected| random[Seeded random action generator]
-    random -->|Random action| runner
-    runner -->|Actions| env[Gymnasium LunarLander-v3]
-    env -->|Observations, rewards, end state| runner
-    runner -->|Episode results, telemetry,<br/>new replay video| app
-    app -->|Replay and results| user
+    user[User] --> app[Streamlit App]
+    benchmark[Saved Benchmark Results] --> app
+    replay[Saved Seed-1000 Replay] --> app
+    app --> runner[Episode Simulation Runner]
+
+    runner --> dqn[DQN Policy]
+    weights[Saved NumPy Weights] --> dqn
+    runner --> random[Seeded Random Policy]
+    runner --> environment[Gymnasium LunarLander Environment]
+
+    runner --> output[Episode Results and Telemetry<br/>Generated Replay Video]
+    output --> app
 ```
 
 At app startup, `load_benchmark()` checks the saved rows and seed list and verifies that the NumPy weights have the hash recorded in the evaluation summary. A newly generated episode is kept in the Streamlit session; it does not overwrite the saved benchmark.
