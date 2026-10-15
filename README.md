@@ -19,31 +19,20 @@ The original DQN was trained for DeepLearning.AI coursework. I kept that checkpo
 ## Architecture
 
 ```mermaid
-flowchart LR
-    person[User in browser] --> ui[Streamlit interface<br/>app.py]
-    subgraph saved[Saved artifacts]
-        weights[NumPy weights<br/>models/dqn_weights.npz]
-        csv[Episode rows<br/>results/episodes.csv]
-        summary[Evaluation metadata<br/>results/summary.json]
-        replay[Illustrative video<br/>assets/evaluation_seed_1000.mp4]
-    end
-    ui --> loader[load_benchmark<br/>lander/benchmark.py]
-    csv --> loader
-    summary --> loader
-    weights -->|SHA-256 check| loader
-    loader -->|metrics and rows| ui
-    replay -->|initial replay| ui
-    ui -->|policy and seed| runner[run_episode<br/>lander/simulation.py]
-    runner --> env[Gymnasium<br/>LunarLander-v3]
-    runner -->|DQN selected| policy[DQNPolicy<br/>lander/policy.py]
-    weights --> policy
-    runner -->|Random selected| rng[Seeded random action generator]
-    policy -->|argmax Q-value action| env
-    rng -->|uniform random action| env
-    env -->|observation, reward, end flags| runner
-    env -->|rendered frames| video[Temporary MP4]
-    runner -->|summary, trace, video bytes| ui
-    ui -->|reward, outcome, actions, charts, replay| person
+flowchart TD
+    user[User] --> app[Streamlit app]
+    benchmark[Saved benchmark results<br/>CSV and JSON] --> app
+    saved_replay[Saved seed-1000 replay video] --> app
+    app -->|Policy and seed| runner[Episode simulation runner]
+    weights[Saved NumPy DQN weights] --> policy[DQN policy]
+    runner -->|Observation when DQN is selected| policy
+    policy -->|Selected action| runner
+    runner -->|When Random is selected| random[Seeded random action generator]
+    random -->|Random action| runner
+    runner -->|Actions| env[Gymnasium LunarLander-v3]
+    env -->|Observations, rewards, end state| runner
+    runner -->|Episode results, telemetry,<br/>new replay video| app
+    app -->|Replay and results| user
 ```
 
 At app startup, `load_benchmark()` checks the saved rows and seed list and verifies that the NumPy weights have the hash recorded in the evaluation summary. A newly generated episode is kept in the Streamlit session; it does not overwrite the saved benchmark.
