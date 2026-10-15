@@ -87,7 +87,8 @@ with replay_tab:
         result, trace, _ = episode
         c1, c2, c3, c4 = st.columns(4)
         c1.metric('Total reward', f"{result['reward']:.1f}")
-        c2.metric('Observed outcome', result['outcome'])
+        display_outcome = 'Landed' if result['outcome'] == 'Landed / at rest' else result['outcome']
+        c2.metric('Observed outcome', display_outcome)
         c3.metric('Steps', result['steps'])
         c4.metric('Reward ≥ 200', 'Yes' if result['score_ge_200'] else 'No')
         st.caption('Reward ≥ 200 is a score threshold, not a landing success measure. Outcome is derived from the simulator termination state.')

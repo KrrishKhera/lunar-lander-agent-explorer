@@ -7,6 +7,27 @@ from lander.explainer import ExplainerError
 
 
 class ExplainerAppTests(unittest.TestCase):
+    def test_outcome_kpi_shortens_only_landed_at_rest(self):
+        trace = [{'step': 1, 'reward': 0.0, 'total_reward': 0.0,
+                  'action': 'Coast', 'x': 0.0, 'y': 0.5, 'angle': 0.0}]
+        for recorded, displayed in (
+            ('Landed / at rest', 'Landed'),
+            ('Crash', 'Crash'),
+        ):
+            with self.subTest(outcome=recorded):
+                result = {
+                    'agent': 'DQN', 'seed': 1000, 'reward': 0.0, 'steps': 1,
+                    'outcome': recorded, 'score_ge_200': False, 'terminated': True,
+                    'truncated': False, 'action_counts': [1, 0, 0, 0],
+                }
+                app = AppTest.from_file('app.py')
+                app.session_state['episode'] = (result, trace, None)
+                app.run(timeout=30)
+                self.assertEqual(len(app.exception), 0)
+                self.assertTrue(any(metric.label == 'Observed outcome' and metric.value == displayed
+                                    for metric in app.metric))
+                self.assertEqual(app.session_state['episode'][0]['outcome'], recorded)
+
     def test_completed_episode_explainer_is_opt_in_and_renders_answer(self):
         result = {
             'agent': 'DQN', 'seed': 1000, 'reward': 12.5, 'steps': 2,
