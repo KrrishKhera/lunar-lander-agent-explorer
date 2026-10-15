@@ -1,0 +1,20 @@
+{
+  "source_sha256": "01aa725e61a800e00e75fe65eae8e8869c0eda1cf150d574f2c57ce961fefbf2",
+  "architecture": [
+    8,
+    64,
+    64,
+    4
+  ],
+  "activations": [
+    "relu",
+    "relu",
+    "linear"
+  ],
+  "training_environment": "OpenAI Gym LunarLander-v2",
+  "training_record": {
+    "episode": 455,
+    "last_100_mean_reward": 200.05
+  },
+  "source": "User-supplied Coursera coursework checkpoint; no retraining performed."
+}

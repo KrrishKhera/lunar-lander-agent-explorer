@@ -1,0 +1,16 @@
+.venv
+.git
+.gitignore
+.env
+.streamlit/secrets.toml
+__pycache__
+*.pyc
+originals
+private_reference
+models/original_dqn.h5
+assets/original_training_demo.mp4
+requirements-dev.txt
+HANDOFF.md
+STATUS.md
+README.md
+tests

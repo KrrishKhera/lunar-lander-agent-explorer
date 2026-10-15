@@ -1,0 +1,29 @@
+{
+  "max_abs_q_error": 0.0,
+  "action_agreement": 1.0,
+  "random_observations": 1000,
+  "rtol": 0.0001,
+  "atol": 0.0001,
+  "real_observations": 344,
+  "real_max_abs_q_error": 0.0,
+  "real_action_agreement": 1.0,
+  "single_observation_max_abs_q_error": 1.1444091796875e-05,
+  "reference": "TensorFlow Dense network rebuilt with weights from original H5 due to legacy input metadata",
+  "episode": {
+    "agent": "DQN",
+    "seed": 1000,
+    "reward": 265.038206,
+    "steps": 344,
+    "score_ge_200": true,
+    "outcome": "Landed / at rest",
+    "terminated": true,
+    "truncated": false,
+    "action_counts": [
+      30,
+      69,
+      170,
+      75
+    ]
+  },
+  "repeat_seed_identical": true
+}

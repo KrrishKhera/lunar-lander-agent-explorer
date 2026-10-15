@@ -1,0 +1,5 @@
+numpy==2.2.6
+gymnasium[box2d]==1.2.2
+streamlit==1.50.0
+imageio==2.37.0
+imageio-ffmpeg==0.6.0

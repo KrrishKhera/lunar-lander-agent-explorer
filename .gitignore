@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.DS_Store
+.vscode/
+.idea/
+*.log
+.env
+.env.*
+.streamlit/secrets.toml
+
+# Course material is supplied locally for reference, not for automatic republication.
+originals/
+private_reference/
+
+# Original training artifacts are not needed by the Streamlit runtime.
+models/original_dqn.h5
+assets/original_training_demo.mp4

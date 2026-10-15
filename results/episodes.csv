@@ -1,0 +1,101 @@
+agent,seed,reward,steps,score_ge_200,outcome,terminated,truncated
+DQN,1000,265.038297,344,True,Landed / at rest,True,False
+DQN,1001,85.785605,1000,False,Time limit,False,True
+DQN,1002,233.999218,327,True,Landed / at rest,True,False
+DQN,1003,193.879798,373,False,Landed / at rest,True,False
+DQN,1004,279.405614,324,True,Landed / at rest,True,False
+DQN,1005,188.301972,359,False,Landed / at rest,True,False
+DQN,1006,274.65858,309,True,Landed / at rest,True,False
+DQN,1007,203.649989,421,True,Landed / at rest,True,False
+DQN,1008,200.185047,472,True,Landed / at rest,True,False
+DQN,1009,139.691534,568,False,Landed / at rest,True,False
+DQN,1010,165.236747,1000,False,Time limit,False,True
+DQN,1011,164.439791,293,False,Landed / at rest,True,False
+DQN,1012,167.708014,271,False,Landed / at rest,True,False
+DQN,1013,265.355455,386,True,Landed / at rest,True,False
+DQN,1014,205.820195,332,True,Landed / at rest,True,False
+DQN,1015,251.706446,408,True,Landed / at rest,True,False
+DQN,1016,186.748476,322,False,Landed / at rest,True,False
+DQN,1017,240.769589,378,True,Landed / at rest,True,False
+DQN,1018,271.057038,319,True,Landed / at rest,True,False
+DQN,1019,234.629216,366,True,Landed / at rest,True,False
+DQN,1020,288.680597,325,True,Landed / at rest,True,False
+DQN,1021,222.657776,397,True,Landed / at rest,True,False
+DQN,1022,101.501536,1000,False,Time limit,False,True
+DQN,1023,224.572012,295,True,Landed / at rest,True,False
+DQN,1024,258.555713,356,True,Landed / at rest,True,False
+DQN,1025,201.697239,518,True,Landed / at rest,True,False
+DQN,1026,223.893827,336,True,Landed / at rest,True,False
+DQN,1027,-115.242614,561,False,Crash,True,False
+DQN,1028,233.818052,445,True,Landed / at rest,True,False
+DQN,1029,237.805023,317,True,Landed / at rest,True,False
+DQN,1030,198.894656,411,False,Landed / at rest,True,False
+DQN,1031,207.885652,307,True,Landed / at rest,True,False
+DQN,1032,281.003118,335,True,Landed / at rest,True,False
+DQN,1033,257.509176,314,True,Landed / at rest,True,False
+DQN,1034,230.244625,372,True,Landed / at rest,True,False
+DQN,1035,201.079987,513,True,Landed / at rest,True,False
+DQN,1036,190.201208,821,False,Landed / at rest,True,False
+DQN,1037,258.627375,417,True,Landed / at rest,True,False
+DQN,1038,240.982914,294,True,Landed / at rest,True,False
+DQN,1039,267.225368,314,True,Landed / at rest,True,False
+DQN,1040,237.786051,363,True,Landed / at rest,True,False
+DQN,1041,247.22833,411,True,Landed / at rest,True,False
+DQN,1042,286.933991,291,True,Landed / at rest,True,False
+DQN,1043,173.495095,460,False,Landed / at rest,True,False
+DQN,1044,168.525469,695,False,Landed / at rest,True,False
+DQN,1045,296.039376,337,True,Landed / at rest,True,False
+DQN,1046,238.30555,305,True,Landed / at rest,True,False
+DQN,1047,210.182634,324,True,Landed / at rest,True,False
+DQN,1048,253.464237,386,True,Landed / at rest,True,False
+DQN,1049,226.623417,351,True,Landed / at rest,True,False
+Random,1000,-302.173179,119,False,Crash,True,False
+Random,1001,-213.194086,73,False,Crash,True,False
+Random,1002,-144.699154,109,False,Crash,True,False
+Random,1003,-152.673471,108,False,Crash,True,False
+Random,1004,-374.460942,95,False,Out of bounds,True,False
+Random,1005,-114.646649,77,False,Crash,True,False
+Random,1006,-343.24909,89,False,Crash,True,False
+Random,1007,-229.717335,90,False,Crash,True,False
+Random,1008,-180.65022,130,False,Crash,True,False
+Random,1009,-209.290501,81,False,Crash,True,False
+Random,1010,-307.456127,93,False,Out of bounds,True,False
+Random,1011,-121.93683,99,False,Crash,True,False
+Random,1012,-8.468217,137,False,Crash,True,False
+Random,1013,-358.723911,91,False,Out of bounds,True,False
+Random,1014,-101.575704,86,False,Crash,True,False
+Random,1015,-240.679922,104,False,Out of bounds,True,False
+Random,1016,-281.441893,81,False,Crash,True,False
+Random,1017,-433.639541,89,False,Crash,True,False
+Random,1018,-203.587678,101,False,Crash,True,False
+Random,1019,-94.74727,72,False,Crash,True,False
+Random,1020,-178.012112,104,False,Out of bounds,True,False
+Random,1021,-141.851295,127,False,Crash,True,False
+Random,1022,-187.108329,104,False,Crash,True,False
+Random,1023,-172.897259,73,False,Crash,True,False
+Random,1024,-283.627323,79,False,Crash,True,False
+Random,1025,-114.97007,148,False,Crash,True,False
+Random,1026,-234.922114,64,False,Crash,True,False
+Random,1027,-201.761015,117,False,Crash,True,False
+Random,1028,-487.788684,100,False,Crash,True,False
+Random,1029,-325.842033,85,False,Crash,True,False
+Random,1030,-83.645947,77,False,Crash,True,False
+Random,1031,-280.423283,105,False,Crash,True,False
+Random,1032,-123.938204,84,False,Crash,True,False
+Random,1033,-102.318883,67,False,Crash,True,False
+Random,1034,-318.410985,109,False,Crash,True,False
+Random,1035,-130.696411,86,False,Crash,True,False
+Random,1036,-98.76997,111,False,Crash,True,False
+Random,1037,-221.033004,150,False,Crash,True,False
+Random,1038,-336.206029,101,False,Crash,True,False
+Random,1039,-134.377368,101,False,Crash,True,False
+Random,1040,-226.121147,84,False,Crash,True,False
+Random,1041,-322.201867,132,False,Crash,True,False
+Random,1042,-132.633382,76,False,Crash,True,False
+Random,1043,-64.970996,81,False,Crash,True,False
+Random,1044,-207.99919,86,False,Crash,True,False
+Random,1045,-201.793649,105,False,Out of bounds,True,False
+Random,1046,-338.340736,79,False,Crash,True,False
+Random,1047,-108.230084,57,False,Crash,True,False
+Random,1048,-292.46799,106,False,Crash,True,False
+Random,1049,-188.444546,68,False,Crash,True,False
